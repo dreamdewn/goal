@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>煤炭资源管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #343a40;
+            color: #fff;
+            border-radius: 5px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        #priority-chart {
+            max-width: 100%;
+            height: auto;
+            margin: 15px 0;
+        }
+        .result-value {
+            font-weight: bold;
+            color: #007bff;
+        }
+        #result-section {
+            display: none;
+        }
+        .btn-primary {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-primary:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        .method-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            background-color: #6c757d;
+        }
+        .method-露天开采 { background-color: #28a745; }
+        .method-长壁开采 { background-color: #007bff; }
+        .method-分层开采 { background-color: #6f42c1; }
+        .method-窄煤柱开采 { background-color: #fd7e14; }
+        .method-水力开采 { background-color: #17a2b8; }
+        .method-房柱式开采 { background-color: #6c757d; }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .history-record {
+            cursor: pointer;
+        }
+        .history-record:hover {
+            background-color: #f8f9fa;
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .nav-link.active {
+            color: #000;
+            font-weight: bold;
+        }
+        .navbar-nav {
+        text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">煤炭分析系统</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" id="coal-analysis-link" href="/">煤层分析</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pollution-assessment-link" href="/pollution">煤污染评估</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="resource-management-link" href="/resource">资源管理</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="agriculture-utilization-link" href="/agriculture">
+                                <i class="bi bi-tree"></i> 农业利用
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+
+
+
+    <div id="loading-overlay">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>煤炭资源管理系统</h1>
+            <p>上传钻井测井数据，获取煤炭资源储量评估和开采规划建议</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <!-- 上传表单 -->
+                <div class="card">
+                    <div class="card-header navbar-nav">
+                        <h3>上传测井数据</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="resource-form">
+                            <div class="mb-3">
+                                <label for="file" class="form-label">测井数据文件 (.csv, .xlsx)</label>
+                                <input type="file" class="form-control" id="file" name="file" accept=".csv, .xlsx, .xls" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="location" class="form-label">位置标识</label>
+                                <input type="text" class="form-control" id="location" name="location" placeholder="例如：矿区A-1号井" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="area" class="form-label">评估面积 (平方米)</label>
+                                <input type="number" class="form-control" id="area" name="area" value="10000" min="100" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">备注信息</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">开始资源评估</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 历史记录 -->
+                <div class="card">
+                    <div class="card-header navbar-nav">
+                        <h3>历史评估记录</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group" id="history-list">
+                            <!-- 历史记录将通过JavaScript动态加载 -->
+                            <div class="text-center text-muted py-3" id="history-placeholder">
+                                <em>加载历史记录中...</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <!-- 结果展示区域 -->
+                <div id="result-section">
+                    <ul class="nav nav-tabs" id="resultTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#summary-tab">资源概览</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#mining-plan-tab">开采规划</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- 资源概览 -->
+                        <div class="tab-pane fade show active" id="summary-tab">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>资源储量概览</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>总资源储量：</strong> <span id="total-resources" class="result-value">--</span></p>
+                                            <p><strong>煤层数量：</strong> <span id="layers-count" class="result-value">--</span></p>
+                                            <p><strong>评估面积：</strong> <span id="assessment-area" class="result-value">--</span></p>
+                                            <p><strong>位置：</strong> <span id="location-display" class="result-value">--</span></p>
+                                            <p><strong>评估时间：</strong> <span id="assessment-time" class="result-value">--</span></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>开采优先级分析：</strong></p>
+                                            <img id="priority-chart" src="" alt="开采优先级分析" style="display: none;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 开采规划 -->
+                        <div class="tab-pane fade" id="mining-plan-tab">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>开采规划建议</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>优先级</th>
+                                                    <th>煤层</th>
+                                                    <th>深度范围</th>
+                                                    <th>资源量(千吨)</th>
+                                                    <th>品质得分</th>
+                                                    <th>开采难度</th>
+                                                    <th>建议方法</th>
+                                                    <th>预期回收率</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="mining-plan-table">
+                                                <!-- 开采规划数据将通过JavaScript动态加载 -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 工具函数：格式化数字，添加千位分隔符
+        function formatNumber(num) {
+            return num.toLocaleString('zh-CN', {maximumFractionDigits: 2});
+        }
+
+        // 显示loading状态
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        // 隐藏loading状态
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        // 处理表单提交
+        document.getElementById('resource-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('file');
+            if (!fileInput.files.length) {
+                alert('请选择要上传的文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('location', document.getElementById('location').value);
+            formData.append('area', document.getElementById('area').value);
+            formData.append('notes', document.getElementById('notes').value);
+
+            showLoading();
+
+            fetch('/resource-assessment', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || '上传失败');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                handleAssessmentResult(data);
+                loadHistory();  // 刷新历史记录
+            })
+            .catch(error => {
+                alert('错误: ' + error.message);
+            })
+            .finally(() => {
+                hideLoading();
+            });
+        });
+
+        // 处理评估结果
+        function handleAssessmentResult(data) {
+            // 显示基本资源信息
+            document.getElementById('total-resources').textContent = formatNumber(data.total_resources) + ' 吨';
+            document.getElementById('layers-count').textContent = data.layers_count;
+            document.getElementById('assessment-area').textContent = data.area + ' 平方米';
+            document.getElementById('location-display').textContent = data.location;
+            document.getElementById('assessment-time').textContent = data.timestamp;
+
+            // 显示开采优先级图表
+            if (data.priority_chart) {
+                const chartImg = document.getElementById('priority-chart');
+                chartImg.src = 'data:image/png;base64,' + data.priority_chart;
+                chartImg.style.display = 'block';
+            }
+
+            // 显示开采规划
+            displayMiningPlan(data.mining_plan);
+
+            // 显示结果卡片
+            document.getElementById('result-section').style.display = 'block';
+
+            // 切换到资源概览选项卡
+            new bootstrap.Tab(document.querySelector('#resultTabs .nav-link[href="#summary-tab"]')).show();
+        }
+
+        // 显示开采规划
+        function displayMiningPlan(plan) {
+            const tableBody = document.getElementById('mining-plan-table');
+            tableBody.innerHTML = '';
+
+            if (!plan || !plan.length) {
+                tableBody.innerHTML = '<tr><td colspan="8" class="text-center">无可用的开采规划数据</td></tr>';
+                return;
+            }
+
+            plan.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.order}</td>
+                    <td>煤层${item.layer}</td>
+                    <td>${item.depth_range}</td>
+                    <td>${formatNumber(item.resource_ktons)}</td>
+                    <td>${item.quality_score.toFixed(1)}</td>
+                    <td>${item.difficulty_score.toFixed(1)}</td>
+                    <td><span class="method-tag method-${item.recommended_method}">${item.recommended_method}</span></td>
+                    <td>${item.expected_recovery_rate.toFixed(1)}%</td>
+                `;
+                tableBody.appendChild(row);
+
+                // 添加详细信息行
+                const detailRow = document.createElement('tr');
+                detailRow.className = 'table-light';
+                detailRow.innerHTML = `
+                    <td colspan="8" class="small">
+                        <strong>方法说明:</strong> ${item.method_details}
+                        <strong>预期产出:</strong> ${formatNumber(item.expected_output_tons)} 吨
+                    </td>
+                `;
+                tableBody.appendChild(detailRow);
+            });
+        }
+
+        // 加载历史记录
+        function loadHistory() {
+            fetch('/resource-history')
+            .then(response => response.json())
+            .then(data => {
+                const historyList = document.getElementById('history-list');
+                const placeholder = document.getElementById('history-placeholder');
+
+                if (Object.keys(data).length === 0) {
+                    placeholder.textContent = '暂无历史评估记录';
+                    return;
+                }
+
+                placeholder.style.display = 'none';
+                historyList.innerHTML = '';
+
+                // 将数据转换为数组以便排序
+                const historyArray = [];
+                for (const location in data) {
+                    historyArray.push({
+                        location: location,
+                        ...data[location]
+                    });
+                }
+
+                // 按时间倒序排序
+                historyArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                historyArray.forEach(record => {
+                    const item = document.createElement('a');
+                    item.className = 'list-group-item list-group-item-action history-record';
+                    item.dataset.key = record.key;
+
+                    const date = new Date(record.timestamp);
+                    const dateStr = date.toLocaleDateString('zh-CN');
+
+                    item.innerHTML = `
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">${record.location}</h5>
+                            <small>${dateStr}</small>
+                        </div>
+                        <p class="mb-1">资源量: ${formatNumber(record.total_resources)} 吨</p>
+                        <small>煤层数: ${record.layers_count}</small>
+                    `;
+
+                    item.addEventListener('click', function() {
+                        loadHistoryRecord(record.key);
+                    });
+
+                    historyList.appendChild(item);
+                });
+            })
+            .catch(error => {
+                console.error('加载历史记录失败:', error);
+                document.getElementById('history-placeholder').textContent = '加载历史记录失败';
+            });
+        }
+
+        // 加载特定历史记录详情
+        function loadHistoryRecord(key) {
+            showLoading();
+
+            fetch(`/resource-history/${key}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('获取历史记录失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                handleAssessmentResult(data);
+            })
+            .catch(error => {
+                alert('错误: ' + error.message);
+            })
+            .finally(() => {
+                hideLoading();
+            });
+        }
+
+        // 初始加载历史记录
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistory();
+        });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                // 移除所有链接的 active 类
+                navLinks.forEach(navLink => {
+                    navLink.classList.remove('active');
+                });
+                // 给当前点击的链接添加 active 类
+                this.classList.add('active');
+            });
+        });
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>煤炭污染评估与生态监测系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+            padding: 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .assessment-result {
+            display: none;
+            margin-top: 30px;
+        }
+        .assessment-header {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .pollution-level {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .level-badge {
+            padding: 5px 10px;
+            border-radius: 10px;
+            color: white;
+        }
+        .level-light {
+            background-color: #20c997;
+        }
+        .level-mild {
+            background-color: #ffc107;
+        }
+        .level-moderate {
+            background-color: #fd7e14;
+        }
+        .level-severe {
+            background-color: #dc3545;
+        }
+        .level-extreme {
+            background-color: #6f42c1;
+        }
+        .risk-item {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 8px 15px;
+            margin: 5px 0;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .recommendation {
+            background-color: #d1e7dd;
+            border-left: 4px solid #20c997;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+        }
+        .history-record {
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .history-record:hover {
+            background-color: #f8f9fa;
+        }
+        #overall-score-gauge {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        .gauge-container {
+            position: relative;
+            text-align: center;
+        }
+        .gauge-value {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .gauge-label {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">煤炭分析系统</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">煤层分析</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/pollution">煤污染评估</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/resource">资源管理</a>
+                        </li>
+                        <li class="nav-item">
+            <a class="nav-link" href="/agriculture">
+                <i class="bi bi-tree"></i> 农业利用
+            </a>
+        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <h1 class="text-center mb-4">煤炭污染评估与生态监测系统</h1>
+
+        <div class="row upload-section">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">上传钻井数据进行污染评估</h5>
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="location" class="form-label">采样位置</label>
+                                <input type="text" class="form-control" id="location" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="file-input" class="form-label">选择钻井数据文件</label>
+                                <input class="form-control" type="file" id="file-input" accept=".xlsx,.xls,.csv" required>
+                                <div class="form-text">请上传包含必要列的Excel文件（深度、深侧向、浅侧向、声波时差、自然伽玛、密度）</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">备注信息</label>
+                                <textarea class="form-control" id="notes" rows="3" placeholder="可选：输入相关采样信息、项目背景等"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">评估煤污染</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">历史记录</h5>
+                        <div id="history-list" class="mt-3">
+                            <div class="text-center text-muted">暂无历史记录</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p>数据处理中，请稍候...</p>
+        </div>
+
+        <div id="assessment-result" class="assessment-result">
+            <div class="assessment-header">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h3 id="assessment-title">煤污染评估结果</h3>
+                        <p id="assessment-meta">采样位置：未知 | 评估时间：未知</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="pollution-level">
+                            污染等级：<span id="pollution-grade" class="level-badge level-light">轻微</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs" id="assessment-tabs">
+                <li class="nav-item">
+                    <a class="nav-link active" id="overview-tab" data-bs-toggle="tab" href="#overview">总体评估</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="depth-tab" data-bs-toggle="tab" href="#depth-analysis">深度分析</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="recommendations-tab" data-bs-toggle="tab" href="#recommendations">修复建议</a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="overview">
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="gauge-container">
+                                <canvas id="overall-score-gauge"></canvas>
+                                <div class="gauge-value" id="overall-score-value">0</div>
+                                <div class="gauge-label">总体污染得分</div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h4>风险评估</h4>
+                            <div id="risk-list">
+                                <!-- 风险将在这里动态添加 -->
+                            </div>
+
+                            <h4 class="mt-4">污染概况</h4>
+                            <p id="pollution-summary">
+                                正在分析煤污染情况...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="depth-analysis">
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h4>煤含量随深度分布</h4>
+                            <div class="chart-container">
+                                <canvas id="coal-percentage-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h4>污染程度随深度分布</h4>
+                            <div class="chart-container">
+                                <canvas id="pollution-level-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="recommendations">
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h4>修复建议</h4>
+                            <div id="recommendations-list">
+                                <!-- 建议将在这里动态添加 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <script>
+        // 全局变量
+        let currentAssessment = null;
+        let coalPercentageChart = null;
+        let pollutionLevelChart = null;
+        let overallScoreGauge = null;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定文件上传表单
+            document.getElementById('upload-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                uploadFileForAssessment();
+            });
+
+            // 加载历史记录
+            loadPollutionHistory();
+        });
+
+        // 上传文件进行评估
+        function uploadFileForAssessment() {
+            const fileInput = document.getElementById('file-input');
+            const locationInput = document.getElementById('location');
+            const notesInput = document.getElementById('notes');
+
+            if (!fileInput.files.length) {
+                showToast('请选择文件', 'error');
+                return;
+            }
+
+            if (!locationInput.value.trim()) {
+                showToast('请输入采样位置', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('location', locationInput.value.trim());
+            formData.append('notes', notesInput.value.trim());
+
+            // 显示加载动画
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('assessment-result').style.display = 'none';
+
+            // 发送请求到后端
+            fetch('http://localhost:5000/pollution-assessment', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || '评估失败');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 存储评估结果
+                currentAssessment = data;
+
+                // 显示评估结果
+                displayAssessmentResult(data);
+
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('assessment-result').style.display = 'block';
+
+                // 重新加载历史记录
+                loadPollutionHistory();
+
+                showToast('评估完成', 'success');
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                showToast(error.message, 'error');
+                console.error('Error:', error);
+            });
+        }
+
+        // 显示评估结果
+        function displayAssessmentResult(assessmentData) {
+            // 更新元数据
+            document.getElementById('assessment-title').textContent = '煤污染评估结果';
+            document.getElementById('assessment-meta').textContent =
+                `采样位置：${assessmentData.location} | 评估时间：${assessmentData.timestamp}`;
+
+            // 更新污染等级
+            const pollutionGrade = assessmentData.assessment.pollution_grade;
+            const gradeElement = document.getElementById('pollution-grade');
+            gradeElement.textContent = pollutionGrade;
+
+            // 设置等级样式
+            gradeElement.className = 'level-badge';
+            if (pollutionGrade === '轻微') {
+                gradeElement.classList.add('level-light');
+            } else if (pollutionGrade === '轻度') {
+                gradeElement.classList.add('level-mild');
+            } else if (pollutionGrade === '中度') {
+                gradeElement.classList.add('level-moderate');
+            } else if (pollutionGrade === '严重') {
+                gradeElement.classList.add('level-severe');
+            } else {
+                gradeElement.classList.add('level-extreme');
+            }
+
+            // 显示风险
+            const riskList = document.getElementById('risk-list');
+            riskList.innerHTML = '';
+
+            if (assessmentData.assessment.risks.length === 0) {
+                riskList.innerHTML = '<div class="text-muted">未发现明显风险</div>';
+            } else {
+                assessmentData.assessment.risks.forEach(risk => {
+                    const riskItem = document.createElement('div');
+                    riskItem.className = 'risk-item';
+                    riskItem.textContent = risk;
+                    riskList.appendChild(riskItem);
+                });
+            }
+
+            // 更新总体得分
+            document.getElementById('overall-score-value').textContent =
+                Math.round(assessmentData.assessment.overall_score);
+
+            // 更新污染概况
+            let summary = `分析显示，该区域的煤污染程度为"${pollutionGrade}"，总体污染得分为${Math.round(assessmentData.assessment.overall_score)}分（满分100分）。`;
+
+            if (assessmentData.assessment.segments.length > 0) {
+                const highestSegment = [...assessmentData.assessment.segments].sort((a, b) =>
+                    b.pollution_level - a.pollution_level)[0];
+
+                summary += ` 污染最严重的深度段位于${highestSegment.start_depth.toFixed(1)}米至${highestSegment.end_depth.toFixed(1)}米处，该段煤含量占比为${(highestSegment.coal_percentage * 100).toFixed(1)}%，污染程度为${highestSegment.pollution_level.toFixed(1)}（满分10分）。`;
+            }
+
+            if (assessmentData.assessment.risks.length > 0) {
+                summary += ` 主要风险包括${assessmentData.assessment.risks.join('、')}。`;
+            }
+
+            document.getElementById('pollution-summary').textContent = summary;
+
+            // 生成建议
+            generateRecommendations(assessmentData.assessment);
+
+            // 创建图表
+            createCoalPercentageChart(assessmentData.assessment.segments);
+            createPollutionLevelChart(assessmentData.assessment.segments);
+            createOverallScoreGauge(assessmentData.assessment.overall_score);
+        }
+
+        // 创建煤含量图表
+        function createCoalPercentageChart(segments) {
+            const ctx = document.getElementById('coal-percentage-chart').getContext('2d');
+
+            // 如果图表已存在，销毁它
+            if (coalPercentageChart) {
+                coalPercentageChart.destroy();
+            }
+
+            // 准备数据
+            const labels = segments.map(s => `${s.start_depth.toFixed(1)}-${s.end_depth.toFixed(1)}m`);
+            const data = segments.map(s => s.coal_percentage * 100);
+
+            // 创建图表
+            coalPercentageChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '煤含量百分比 (%)',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '煤含量百分比 (%)'
+                            },
+                            max: 100
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '深度范围 (m)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 创建污染程度图表
+        function createPollutionLevelChart(segments) {
+            const ctx = document.getElementById('pollution-level-chart').getContext('2d');
+
+            // 如果图表已存在，销毁它
+            if (pollutionLevelChart) {
+                pollutionLevelChart.destroy();
+            }
+
+            // 准备数据
+            const labels = segments.map(s => `${s.start_depth.toFixed(1)}-${s.end_depth.toFixed(1)}m`);
+            const data = segments.map(s => s.pollution_level);
+
+            // 创建图表
+            pollutionLevelChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '污染程度 (0-10)',
+                        data: data,
+                        backgroundColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            if (value < 2) return 'rgba(32, 201, 151, 0.5)';
+                            if (value < 4) return 'rgba(255, 193, 7, 0.5)';
+                            if (value < 6) return 'rgba(253, 126, 20, 0.5)';
+                            if (value < 8) return 'rgba(220, 53, 69, 0.5)';
+                            return 'rgba(111, 66, 193, 0.5)';
+                        },
+                        borderColor: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            if (value < 2) return 'rgba(32, 201, 151, 1)';
+                            if (value < 4) return 'rgba(255, 193, 7, 1)';
+                            if (value < 6) return 'rgba(253, 126, 20, 1)';
+                            if (value < 8) return 'rgba(220, 53, 69, 1)';
+                            return 'rgba(111, 66, 193, 1)';
+                        },
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '污染程度 (0-10)'
+                            },
+                            max: 10
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '深度范围 (m)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 创建总体评分仪表盘
+        function createOverallScoreGauge(score) {
+            const ctx = document.getElementById('overall-score-gauge').getContext('2d');
+
+            // 如果图表已存在，销毁它
+            if (overallScoreGauge) {
+                overallScoreGauge.destroy();
+            }
+
+            // 创建仪表盘图表
+            overallScoreGauge = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [score, 100 - score],
+                        backgroundColor: [
+                            getScoreColor(score),
+                            '#f1f1f1'
+                        ],
+                        borderWidth: 0,
+                        circumference: 180,
+                        rotation: 270
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        tooltip: {
+                            enabled: false
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // 根据得分获取颜色
+        function getScoreColor(score) {
+            if (score < 20) return '#20c997'; // 轻微
+            if (score < 40) return '#ffc107'; // 轻度
+            if (score < 60) return '#fd7e14'; // 中度
+            if (score < 80) return '#dc3545'; // 严重
+            return '#6f42c1'; // 极严重
+        }
+
+        // 生成修复建议
+        function generateRecommendations(assessment) {
+            const recommendationsList = document.getElementById('recommendations-list');
+            recommendationsList.innerHTML = '';
+
+            const recommendations = [];
+
+            // 根据污染程度生成不同的建议
+            if (assessment.overall_score < 20) {
+                recommendations.push('当前煤污染程度轻微，建议定期监测，无需特别处理。');
+                recommendations.push('可以考虑进行年度土壤采样分析，确保污染不会加重。');
+            } else if (assessment.overall_score < 40) {
+                recommendations.push('轻度煤污染，建议增加监测频率至季度一次。');
+                recommendations.push('控制雨水径流冲刷污染区域，防止污染物扩散。');
+                recommendations.push('对表层土壤可考虑使用植物修复技术，种植能够吸收有机污染物的植物。');
+            } else if (assessment.overall_score < 60) {
+                recommendations.push('中度煤污染，需要实施有效的控制措施。');
+                recommendations.push('建议进行详细的地下水污染评估，防止污染物迁移至地下水。');
+                recommendations.push('采用物理隔离方法，如覆盖层或垂直屏障，防止污染物扩散。');
+                recommendations.push('考虑使用微生物修复技术，通过添加特定微生物促进煤污染物降解。');
+            } else if (assessment.overall_score < 80) {
+                recommendations.push('严重煤污染，需要立即采取修复行动。');
+                recommendations.push('建议实施区域封闭管理，限制人员进入，防止健康风险。');
+                recommendations.push('对污染严重区域进行土壤置换，去除受污染的土壤并替换为清洁土壤。');
+                recommendations.push('实施地下水抽提处理系统，防止污染物进一步扩散至地下水系统。');
+                recommendations.push('考虑热处理技术，通过高温处理去除土壤中的煤污染物。');
+            } else {
+                recommendations.push('极严重煤污染，需要紧急修复和管控措施。');
+                recommendations.push('立即封锁污染区域，设置警示标志，防止人员接触。');
+                recommendations.push('实施完整的土壤挖掘和异位处理，彻底清除污染源。');
+                recommendations.push('建立长期的地下水和土壤监测系统，确保修复效果。');
+                recommendations.push('考虑使用化学氧化/还原技术，通过添加化学药剂降解或固定煤污染物。');
+                recommendations.push('制定长期的生态恢复计划，包括重新植被和生态系统重建。');
+            }
+
+            // 添加深度特定的建议
+            if (assessment.segments.length > 0) {
+                const highestSegments = [...assessment.segments]
+                    .sort((a, b) => b.pollution_level - a.pollution_level)
+                    .slice(0, 3);
+
+                if (highestSegments.length > 0 && highestSegments[0].pollution_level > 5) {
+                    const segmentRanges = highestSegments
+                        .map(s => `${s.start_depth.toFixed(1)}米至${s.end_depth.toFixed(1)}米`)
+                        .join('、');
+
+                    recommendations.push(`重点关注以下深度区间的污染处理：${segmentRanges}，这些区域煤污染程度较高。`);
+                }
+            }
+
+            // 添加建议到页面
+            recommendations.forEach(rec => {
+                const recItem = document.createElement('div');
+                recItem.className = 'recommendation';
+                recItem.textContent = rec;
+                recommendationsList.appendChild(recItem);
+            });
+        }
+
+        // 加载污染历史记录
+        function loadPollutionHistory() {
+            fetch('http://localhost:5000/pollution-history')
+                .then(response => response.json())
+                .then(data => {
+                    const historyList = document.getElementById('history-list');
+
+                    // 检查是否有历史记录
+                    if (Object.keys(data).length === 0) {
+                        historyList.innerHTML = '<div class="text-center text-muted">暂无历史记录</div>';
+                        return;
+                    }
+
+                    // 显示历史记录
+                    historyList.innerHTML = '';
+
+                    for (const location in data) {
+                        const record = data[location];
+
+                        const recordItem = document.createElement('div');
+                        recordItem.className = 'history-record';
+                        recordItem.dataset.key = record.key;
+
+                        const levelClass = getGradeClass(record.pollution_grade);
+
+                        recordItem.innerHTML = `
+                            <div><strong>${location}</strong></div>
+                            <div class="small text-muted">${record.timestamp}</div>
+                            <div class="mt-1">
+                                污染等级: <span class="level-badge ${levelClass}">${record.pollution_grade}</span>
+                            </div>
+                        `;
+
+                        // 添加点击事件
+                        recordItem.addEventListener('click', function() {
+                            loadHistoryDetail(record.key);
+                        });
+
+                        historyList.appendChild(recordItem);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // 获取污染等级对应的CSS类
+        function getGradeClass(grade) {
+            switch (grade) {
+                case '轻微': return 'level-light';
+                case '轻度': return 'level-mild';
+                case '中度': return 'level-moderate';
+                case '严重': return 'level-severe';
+                case '极严重': return 'level-extreme';
+                default: return 'level-light';
+            }
+        }
+
+        // 加载历史详情
+        function loadHistoryDetail(historyKey) {
+            document.getElementById('loading').style.display = 'block';
+
+            fetch(`http://localhost:5000/pollution-history/${historyKey}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('未找到历史记录');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 显示历史评估结果
+                    currentAssessment = data;
+                    displayAssessmentResult(data);
+
+                    // 显示结果
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('assessment-result').style.display = 'block';
+
+                    // 滚动到结果区域
+                    document.getElementById('assessment-result').scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    showToast(error.message, 'error');
+                    console.error('Error:', error);
+                });
+        }
+
+        // 显示提示消息
+        function showToast(message, type) {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "center",
+                backgroundColor: type === 'error' ? "#ff6b6b" : "#51cf66",
+            }).showToast();
+        }
+    </script>
+</body>
+</html>

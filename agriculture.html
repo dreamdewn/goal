@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>煤炭资源管理系统 - 农业利用</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+
+        .nav-link.active {
+            color: #000;
+            font-weight: bold;
+        }
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #2e7d32;
+            color: #fff;
+            border-radius: 5px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .result-value {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        #result-section {
+            display: none;
+        }
+        .btn-primary {
+            background-color: #2e7d32;
+            border-color: #2e7d32;
+        }
+        .btn-primary:hover {
+            background-color: #1b5e20;
+            border-color: #1b5e20;
+        }
+        .soil-quality-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .progress {
+            height: 8px;
+            margin-top: 5px;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .bg-light-green {
+            background-color: #e8f5e9;
+        }
+        .history-record {
+            cursor: pointer;
+        }
+        .history-record:hover {
+            background-color: #f8f9fa;
+        }
+        .plant-card {
+            margin-bottom: 15px;
+            border-left: 4px solid #2e7d32;
+        }
+        .plant-card-pioneer {
+            border-left-color: #ff9800;
+        }
+        .plant-card-economic {
+            border-left-color: #2196f3;
+        }
+        .stage-badge {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+        .stage-pioneer {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+        .stage-economic {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+        }
+        .pollution-low {
+            color: #43a047;
+        }
+        .pollution-medium {
+            color: #fb8c00;
+        }
+        .pollution-high {
+            color: #e53935;
+        }
+        .crop-score {
+            display: inline-block;
+            width: 35px;
+            height: 35px;
+            line-height: 35px;
+            text-align: center;
+            border-radius: 50%;
+            color: white;
+            background-color: #2e7d32;
+            margin-right: 10px;
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .fertilizer-item {
+            padding: 10px;
+            border-left: 3px solid #2e7d32;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .measure-item {
+            padding: 10px;
+            border-left: 3px solid #1565c0;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .navbar-nav {
+        text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">煤炭分析系统</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" id="coal-analysis-link" href="/">煤层分析</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pollution-assessment-link" href="/pollution">煤污染评估</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="resource-management-link" href="/resource">资源管理</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="agriculture-utilization-link" href="/agriculture">
+                                <i class="bi bi-tree"></i> 农业利用
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+
+    <div id="loading-overlay">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1><i class="bi bi-tree"></i> 煤炭资源区农业利用系统</h1>
+            <p>上传测井数据，获取土地复垦与农业种植指导</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <!-- 上传表单 -->
+                <div class="card">
+                    <div class="card-header navbar-nav">
+                        <h3>上传土壤数据</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="agriculture-form">
+                            <div class="mb-3">
+                                <label for="file" class="form-label">测井数据文件 (.csv, .xlsx)</label>
+                                <input type="file" class="form-control" id="file" name="file" accept=".csv, .xlsx, .xls" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="location" class="form-label">位置标识</label>
+                                <input type="text" class="form-control" id="location" name="location" placeholder="例如：矿区A-1号地块" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="area" class="form-label">评估面积 (平方米)</label>
+                                <input type="number" class="form-control" id="area" name="area" value="10000" min="100" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">备注信息</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">评估类型</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="type" id="type-both" value="both" checked>
+                                    <label class="form-check-label" for="type-both">
+                                        复垦与农业综合评估
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="type" id="type-reclamation" value="reclamation">
+                                    <label class="form-check-label" for="type-reclamation">
+                                        仅土地复垦评估
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="type" id="type-agriculture" value="agriculture">
+                                    <label class="form-check-label" for="type-agriculture">
+                                        仅农业种植评估
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">开始评估</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 历史记录 -->
+                <div class="card">
+                    <div class="card-header navbar-nav">
+                        <h3>历史评估记录</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group" id="history-list">
+                            <!-- 历史记录将通过JavaScript动态加载 -->
+                            <div class="text-center text-muted py-3" id="history-placeholder">
+                                <em>加载历史记录中...</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <!-- 结果展示区域 -->
+                <div id="result-section">
+                    <ul class="nav nav-tabs" id="resultTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#soil-tab">
+                                <i class="bi bi-layers"></i> 土壤评估
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#reclamation-tab">
+                                <i class="bi bi-tree"></i> 复垦方案
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#agriculture-tab">
+                                <i class="bi bi-flower1"></i> 农业种植
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- 土壤评估 -->
+                        <div class="tab-pane fade show active" id="soil-tab">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>土壤质量评估</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card bg-light-green mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">基本信息</h5>
+                                                    <p><strong>位置：</strong> <span id="location-display" class="result-value">--</span></p>
+                                                    <p><strong>土壤类型：</strong> <span id="soil-type" class="result-value">--</span></p>
+                                                    <p><strong>评估面积：</strong> <span id="assessment-area" class="result-value">--</span></p>
+                                                    <p><strong>评估时间：</strong> <span id="assessment-time" class="result-value">--</span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-light-green mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">污染评估</h5>
+                                                    <p><strong>污染等级：</strong> <span id="pollution-level" class="result-value">--</span></p>
+                                                    <p><strong>煤含量：</strong> <span id="coal-content" class="result-value">--</span> %</p>
+                                                    <div class="progress mb-2">
+                                                        <div id="pollution-progress" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                                                    </div>
+                                                    <p><small id="pollution-description">--</small></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h5 class="mt-4">土壤指标分析</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="soil-quality-item">
+                                                <span>肥力指数：</span>
+                                                <span id="fertility-score" class="result-value">-- / 100</span>
+                                            </div>
+                                            <div class="progress mb-3">
+                                                <div id="fertility-progress" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                                            </div>
+
+                                            <div class="soil-quality-item">
+                                                <span>有机质含量：</span>
+                                                <span id="organic-matter" class="result-value">-- %</span>
+                                            </div>
+                                            <div class="progress mb-3">
+                                                <div id="organic-progress" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="soil-quality-item">
+                                                <span>pH值：</span>
+                                                <span id="ph-value" class="result-value">--</span>
+                                            </div>
+                                            <div class="progress mb-3">
+                                                <div id="ph-progress" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                                            </div>
+
+                                            <div class="soil-quality-item">
+                                                <span>水分含量：</span>
+                                                <span id="moisture" class="result-value">-- %</span>
+                                            </div>
+                                            <div class="progress mb-3">
+                                                <div id="moisture-progress" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 复垦方案 -->
+                        <div class="tab-pane fade" id="reclamation-tab">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h3>土地复垦策略</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">复垦策略</h5>
+                                                    <h4 id="strategy-name" class="text-success mb-3">--</h4>
+                                                    <p id="strategy-description">--</p>
+                                                    <div class="d-flex justify-content-between mt-3">
+                                                        <div>
+                                                            <small class="text-muted">预计周期</small>
+                                                            <p id="strategy-duration" class="mb-0 fw-bold">--</p>
+                                                        </div>
+                                                        <div>
+                                                            <small class="text-muted">成本水平</small>
+                                                            <p id="strategy-cost" class="mb-0 fw-bold">--</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">具体措施</h5>
+                                                    <div id="measures-container">
+                                                        <!-- 措施将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无措施</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h4 class="mb-3">植被重建方案</h4>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-header bg-warning bg-opacity-25">
+                                                    <h5 class="mb-0">先锋阶段 <small id="pioneer-duration" class="text-muted">(--)</small></h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="text-muted">用于稳定和改善土壤的初始植物</p>
+                                                    <div id="pioneer-plants">
+                                                        <!-- 先锋植物将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-header bg-primary bg-opacity-25">
+                                                    <h5 class="mb-0">经济阶段 <small id="economic-duration" class="text-muted">(--)</small></h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="text-muted">具有经济价值的长期植物</p>
+                                                    <div id="economic-plants">
+                                                        <!-- 经济植物将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 农业种植 -->
+                        <div class="tab-pane fade" id="agriculture-tab">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h3>农业种植建议</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <h5>适宜种植作物</h5>
+                                            <div id="suitable-crops">
+                                                <!-- 适宜作物将在这里动态加载 -->
+                                                <p class="text-center text-muted">暂无数据</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5>不宜种植作物</h5>
+                                            <div id="unsuitable-crops">
+                                                <!-- 不宜作物将在这里动态加载 -->
+                                                <p class="text-center text-muted">暂无数据</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h5>种植管理建议</h5>
+                                    <div class="card mb-4">
+                                        <div class="card-body">
+                                            <ul class="list-group list-group-flush" id="management-tips">
+                                                <!-- 管理建议将在这里动态加载 -->
+                                                <li class="list-group-item text-center text-muted">暂无管理建议</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-header">
+                                                    <h5 class="mb-0">肥料施用方案</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <h6>基肥</h6>
+                                                    <div id="base-fertilizer">
+                                                        <!-- 基肥将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+
+                                                    <h6 class="mt-3">追肥</h6>
+                                                    <div id="top-dressing">
+                                                        <!-- 追肥将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+
+                                                    <h6 class="mt-3">特殊处理</h6>
+                                                    <div id="special-treatment">
+                                                        <!-- 特殊处理将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-header">
+                                                    <h5 class="mb-0">灌溉建议</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <h6>推荐系统</h6>
+                                                    <div id="irrigation-system">
+                                                        <!-- 灌溉系统将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+
+                                                    <h6 class="mt-3">灌溉策略</h6>
+                                                    <div id="irrigation-strategy">
+                                                        <!-- 灌溉策略将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+
+                                                    <h6 class="mt-3">节水技术</h6>
+                                                    <div id="water-saving">
+                                                        <!-- 节水技术将在这里动态加载 -->
+                                                        <p class="text-center text-muted">暂无数据</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+
+           document.addEventListener('DOMContentLoaded', function () {
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                // 移除所有链接的 active 类
+                navLinks.forEach(navLink => {
+                    navLink.classList.remove('active');
+                });
+                // 给当前点击的链接添加 active 类
+                this.classList.add('active');
+            });
+        });
+    });
+
+        // 工具函数：格式化数字，添加千位分隔符
+        function formatNumber(num) {
+            return num.toLocaleString('zh-CN', {maximumFractionDigits: 2});
+        }
+
+        // 显示loading状态
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        // 隐藏loading状态
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        // 处理表单提交
+        document.getElementById('agriculture-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('file');
+            if (!fileInput.files.length) {
+                alert('请选择要上传的文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('location', document.getElementById('location').value);
+            formData.append('area', document.getElementById('area').value);
+            formData.append('notes', document.getElementById('notes').value);
+
+            // 获取评估类型
+            const typeRadios = document.getElementsByName('type');
+            for (const radio of typeRadios) {
+                if (radio.checked) {
+                    formData.append('type', radio.value);
+                    break;
+                }
+            }
+
+            showLoading();
+
+            fetch('/agriculture-assessment', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || '上传失败');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                handleAssessmentResult(data);
+                loadHistory();  // 刷新历史记录
+            })
+            .catch(error => {
+                alert('错误: ' + error.message);
+            })
+            .finally(() => {
+                hideLoading();
+            });
+        });
+
+        // 处理评估结果
+        function handleAssessmentResult(data) {
+            // 显示土壤评估数据
+            displaySoilQuality(data.soil_quality, data);
+
+            // 根据评估类型显示不同的结果
+            if (data.reclamation_plan) {
+                displayReclamationPlan(data.reclamation_plan);
+                document.querySelector('#resultTabs .nav-link[href="#reclamation-tab"]').parentElement.style.display = 'block';
+            } else {
+                document.querySelector('#resultTabs .nav-link[href="#reclamation-tab"]').parentElement.style.display = 'none';
+            }
+
+            if (data.agriculture_recommendation) {
+                displayAgricultureRecommendation(data.agriculture_recommendation);
+                document.querySelector('#resultTabs .nav-link[href="#agriculture-tab"]').parentElement.style.display = 'block';
+            } else {
+                document.querySelector('#resultTabs .nav-link[href="#agriculture-tab"]').parentElement.style.display = 'none';
+            }
+
+            // 显示结果区域
+            document.getElementById('result-section').style.display = 'block';
+
+            // 切换到土壤评估选项卡
+            new bootstrap.Tab(document.querySelector('#resultTabs .nav-link[href="#soil-tab"]')).show();
+        }
+
+        // 显示土壤质量评估
+        function displaySoilQuality(soilQuality, fullData) {
+            // 基本信息
+            document.getElementById('location-display').textContent = fullData.location;
+            document.getElementById('soil-type').textContent = soilQuality.soil_type;
+            document.getElementById('assessment-area').textContent = formatNumber(fullData.area) + ' 平方米';
+            document.getElementById('assessment-time').textContent = fullData.timestamp;
+
+            // 污染评估
+            const pollutionLevel = soilQuality.pollution_level.level;
+            const pollutionScore = soilQuality.pollution_level.score;
+            document.getElementById('pollution-level').textContent = pollutionLevel;
+            document.getElementById('coal-content').textContent = soilQuality.coal_content;
+            document.getElementById('pollution-description').textContent = soilQuality.pollution_level.description;
+
+            // 设置污染等级颜色
+            const pollutionElement = document.getElementById('pollution-level');
+            pollutionElement.className = 'result-value';
+            if (pollutionLevel === '轻微') {
+                pollutionElement.classList.add('pollution-low');
+                document.getElementById('pollution-progress').className = 'progress-bar bg-success';
+            } else if (pollutionLevel === '中度') {
+                pollutionElement.classList.add('pollution-medium');
+                document.getElementById('pollution-progress').className = 'progress-bar bg-warning';
+            } else {
+                pollutionElement.classList.add('pollution-high');
+                document.getElementById('pollution-progress').className = 'progress-bar bg-danger';
+            }
+            document.getElementById('pollution-progress').style.width = `${pollutionScore}%`;
+
+            // 土壤指标
+            // 肥力指数
+            document.getElementById('fertility-score').textContent = `${soilQuality.fertility_score} / 100`;
+            document.getElementById('fertility-progress').style.width = `${soilQuality.fertility_score}%`;
+
+            // 有机质含量
+            document.getElementById('organic-matter').textContent = `${soilQuality.organic_matter}%`;
+            // 有机质进度条（假设10%为最大值）
+            const organicProgress = Math.min(100, soilQuality.organic_matter * 10);
+            document.getElementById('organic-progress').style.width = `${organicProgress}%`;
+
+            // pH值
+            document.getElementById('ph-value').textContent = soilQuality.ph_value;
+            // pH进度条（4-9范围映射到0-100%）
+            const phProgress = Math.min(100, Math.max(0, (soilQuality.ph_value - 4) / 5 * 100));
+            document.getElementById('ph-progress').style.width = `${phProgress}%`;
+
+            // 水分含量
+            document.getElementById('moisture').textContent = `${soilQuality.moisture}%`;
+            // 水分进度条（假设50%为最大值）
+            const moistureProgress = Math.min(100, soilQuality.moisture * 2);
+            document.getElementById('moisture-progress').style.width = `${moistureProgress}%`;
+        }
+
+        // 显示复垦方案
+        function displayReclamationPlan(plan) {
+            // 显示复垦策略
+            const strategy = plan.strategy;
+            document.getElementById('strategy-name').textContent = strategy.name;
+            document.getElementById('strategy-description').textContent = strategy.description;
+            document.getElementById('strategy-duration').textContent = strategy.duration;
+            document.getElementById('strategy-cost').textContent = strategy.cost_level;
+
+            // 显示具体措施
+            const measuresContainer = document.getElementById('measures-container');
+            measuresContainer.innerHTML = '';
+
+            if (plan.measures && plan.measures.length > 0) {
+                plan.measures.forEach(measure => {
+                    const measureItem = document.createElement('div');
+                    measureItem.className = 'measure-item';
+                    measureItem.innerHTML = `
+                        <h6>${measure.name}</h6>
+                        <p class="mb-1">${measure.description}</p>
+                        <small class="text-muted">用量: ${measure.amount}</small>
+                    `;
+                    measuresContainer.appendChild(measureItem);
+                });
+            } else {
+                measuresContainer.innerHTML = '<p class="text-center text-muted">暂无具体措施</p>';
+            }
+
+            // 显示植被重建方案
+            const vegetation = plan.vegetation_plan;
+
+            // 先锋阶段
+            document.getElementById('pioneer-duration').textContent = `(${vegetation.pioneer_stage.duration})`;
+            const pioneerContainer = document.getElementById('pioneer-plants');
+            pioneerContainer.innerHTML = '';
+
+            if (vegetation.pioneer_stage.plants && vegetation.pioneer_stage.plants.length > 0) {
+                vegetation.pioneer_stage.plants.forEach(plant => {
+                    const plantCard = document.createElement('div');
+                    plantCard.className = 'plant-card plant-card-pioneer p-2 mb-2';
+                    plantCard.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">${plant.name} <span class="badge stage-badge stage-pioneer">先锋</span></h6>
+                            <small>${plant.type}</small>
+                        </div>
+                        <p class="mb-0 small">${plant.function}</p>
+                    `;
+                    pioneerContainer.appendChild(plantCard);
+                });
+            } else {
+                pioneerContainer.innerHTML = '<p class="text-center text-muted">暂无先锋植物数据</p>';
+            }
+
+            // 经济阶段
+            document.getElementById('economic-duration').textContent = `(${vegetation.economic_stage.duration})`;
+            const economicContainer = document.getElementById('economic-plants');
+            economicContainer.innerHTML = '';
+
+            if (vegetation.economic_stage.plants && vegetation.economic_stage.plants.length > 0) {
+                vegetation.economic_stage.plants.forEach(plant => {
+                    const plantCard = document.createElement('div');
+                    plantCard.className = 'plant-card plant-card-economic p-2 mb-2';
+                    plantCard.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">${plant.name} <span class="badge stage-badge stage-economic">经济</span></h6>
+                            <small>${plant.type}</small>
+                        </div>
+                        <p class="mb-0 small">${plant.function}</p>
+                    `;
+                    economicContainer.appendChild(plantCard);
+                });
+            } else {
+                economicContainer.innerHTML = '<p class="text-center text-muted">暂无经济植物数据</p>';
+            }
+        }
+
+        // 显示农业种植建议
+        function displayAgricultureRecommendation(recommendation) {
+            // 显示适宜作物
+            const suitableCropsContainer = document.getElementById('suitable-crops');
+            suitableCropsContainer.innerHTML = '';
+
+            if (recommendation.suitable_crops && recommendation.suitable_crops.length > 0) {
+                recommendation.suitable_crops.forEach(crop => {
+                    const cropItem = document.createElement('div');
+                    cropItem.className = 'card mb-2';
+                    cropItem.innerHTML = `
+                        <div class="card-body py-2">
+                            <div class="d-flex align-items-center">
+                                <span class="crop-score">${crop.score.toFixed(0)}</span>
+                                <h5 class="mb-0">${crop.name}</h5>
+                            </div>
+                            <p class="mb-0 small text-muted mt-1">${crop.reason}</p>
+                        </div>
+                    `;
+                    suitableCropsContainer.appendChild(cropItem);
+                });
+            } else {
+                suitableCropsContainer.innerHTML = '<p class="text-center text-muted">暂无适宜作物数据</p>';
+            }
+
+            // 显示不宜作物
+            const unsuitableCropsContainer = document.getElementById('unsuitable-crops');
+            unsuitableCropsContainer.innerHTML = '';
+
+            if (recommendation.unsuitable_crops && recommendation.unsuitable_crops.length > 0) {
+                recommendation.unsuitable_crops.forEach(crop => {
+                    const cropItem = document.createElement('div');
+                    cropItem.className = 'alert alert-danger py-2 mb-2';
+                    cropItem.innerHTML = `
+                        <h6 class="mb-1">${crop.name}</h6>
+                        <p class="mb-0 small">${crop.reason}</p>
+                    `;
+                    unsuitableCropsContainer.appendChild(cropItem);
+                });
+            } else {
+                unsuitableCropsContainer.innerHTML = '<p class="text-center text-muted">暂无不宜作物数据</p>';
+            }
+
+            // 显示管理建议
+            const tipsContainer = document.getElementById('management-tips');
+            tipsContainer.innerHTML = '';
+
+            if (recommendation.management_tips && recommendation.management_tips.length > 0) {
+                recommendation.management_tips.forEach(tip => {
+                    const tipItem = document.createElement('li');
+                    tipItem.className = 'list-group-item';
+                    tipItem.innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i> ${tip}`;
+                    tipsContainer.appendChild(tipItem);
+                });
+            } else {
+                tipsContainer.innerHTML = '<li class="list-group-item text-center text-muted">暂无管理建议</li>';
+            }
+
+            // 显示肥料建议
+            // 基肥
+            const baseContainer = document.getElementById('base-fertilizer');
+            baseContainer.innerHTML = '';
+
+            if (recommendation.fertilizer_recommendation &&
+                recommendation.fertilizer_recommendation.base_fertilizer &&
+                recommendation.fertilizer_recommendation.base_fertilizer.length > 0) {
+                recommendation.fertilizer_recommendation.base_fertilizer.forEach(fertilizer => {
+                    const fertilizerItem = document.createElement('div');
+                    fertilizerItem.className = 'fertilizer-item';
+                    fertilizerItem.innerHTML = `
+                        <h6 class="mb-1">${fertilizer.name}</h6>
+                        <p class="mb-1 small">${fertilizer.purpose}</p>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>用量: ${fertilizer.amount}</span>
+                            <span>时间: ${fertilizer.timing}</span>
+                        </div>
+                    `;
+                    baseContainer.appendChild(fertilizerItem);
+                });
+            } else {
+                baseContainer.innerHTML = '<p class="text-center text-muted">暂无基肥建议</p>';
+            }
+
+            // 追肥
+            const topDressingContainer = document.getElementById('top-dressing');
+            topDressingContainer.innerHTML = '';
+
+            if (recommendation.fertilizer_recommendation &&
+                recommendation.fertilizer_recommendation.top_dressing &&
+                recommendation.fertilizer_recommendation.top_dressing.length > 0) {
+                recommendation.fertilizer_recommendation.top_dressing.forEach(fertilizer => {
+                    const fertilizerItem = document.createElement('div');
+                    fertilizerItem.className = 'fertilizer-item';
+                    fertilizerItem.innerHTML = `
+                        <h6 class="mb-1">${fertilizer.name}</h6>
+                        <p class="mb-1 small">${fertilizer.purpose}</p>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>用量: ${fertilizer.amount}</span>
+                            <span>时间: ${fertilizer.timing}</span>
+                        </div>
+                    `;
+                    topDressingContainer.appendChild(fertilizerItem);
+                });
+            } else {
+                topDressingContainer.innerHTML = '<p class="text-center text-muted">暂无追肥建议</p>';
+            }
+
+            // 特殊处理
+            const specialContainer = document.getElementById('special-treatment');
+            specialContainer.innerHTML = '';
+
+            if (recommendation.fertilizer_recommendation &&
+                recommendation.fertilizer_recommendation.special_treatment &&
+                recommendation.fertilizer_recommendation.special_treatment.length > 0) {
+                recommendation.fertilizer_recommendation.special_treatment.forEach(fertilizer => {
+                    const fertilizerItem = document.createElement('div');
+                    fertilizerItem.className = 'fertilizer-item';
+                    fertilizerItem.innerHTML = `
+                        <h6 class="mb-1">${fertilizer.name}</h6>
+                        <p class="mb-1 small">${fertilizer.purpose}</p>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>用量: ${fertilizer.amount}</span>
+                            <span>时间: ${fertilizer.timing}</span>
+                        </div>
+                    `;
+                    specialContainer.appendChild(fertilizerItem);
+                });
+            } else {
+                specialContainer.innerHTML = '<p class="text-center text-muted">暂无特殊处理建议</p>';
+            }
+
+            // 显示灌溉建议
+            // 灌溉系统
+            const systemContainer = document.getElementById('irrigation-system');
+            if (recommendation.irrigation_recommendation && recommendation.irrigation_recommendation.irrigation_system) {
+                const system = recommendation.irrigation_recommendation.irrigation_system;
+                systemContainer.innerHTML = `
+                    <div class="card bg-light">
+                        <div class="card-body py-2">
+                            <h6 class="card-title">${system.type}</h6>
+                            <p class="mb-1 small">${system.advantage}</p>
+                            <p class="mb-0 small text-muted">成本水平: ${system.cost_level}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                systemContainer.innerHTML = '<p class="text-center text-muted">暂无灌溉系统建议</p>';
+            }
+
+            // 灌溉策略
+            const strategyContainer = document.getElementById('irrigation-strategy');
+            if (recommendation.irrigation_recommendation && recommendation.irrigation_recommendation.irrigation_strategy) {
+                const strategy = recommendation.irrigation_recommendation.irrigation_strategy;
+                strategyContainer.innerHTML = `
+                    <div class="card bg-light">
+                        <div class="card-body py-2">
+                            <p class="mb-1"><strong>频率:</strong> ${strategy.frequency}</p>
+                            <p class="mb-1"><strong>间隔:</strong> ${strategy.interval}</p>
+                            <p class="mb-0"><strong>用水量:</strong> ${strategy.amount}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                strategyContainer.innerHTML = '<p class="text-center text-muted">暂无灌溉策略建议</p>';
+            }
+
+            // 节水技术
+            const waterSavingContainer = document.getElementById('water-saving');
+            waterSavingContainer.innerHTML = '';
+
+            if (recommendation.irrigation_recommendation &&
+                recommendation.irrigation_recommendation.water_saving_techniques &&
+                recommendation.irrigation_recommendation.water_saving_techniques.length > 0) {
+                recommendation.irrigation_recommendation.water_saving_techniques.forEach(technique => {
+                    const techniqueItem = document.createElement('div');
+                    techniqueItem.className = 'fertilizer-item';
+                    techniqueItem.innerHTML = `
+                        <h6 class="mb-1">${technique.name}</h6>
+                        <p class="mb-1 small">${technique.description}</p>
+                        <p class="mb-0 small text-success"><i class="bi bi-water"></i> ${technique.effectiveness}</p>
+                    `;
+                    waterSavingContainer.appendChild(techniqueItem);
+                });
+            } else {
+                waterSavingContainer.innerHTML = '<p class="text-center text-muted">暂无节水技术建议</p>';
+            }
+        }
+
+        // 加载历史记录
+        function loadHistory() {
+            fetch('/agriculture-history')
+            .then(response => response.json())
+            .then(data => {
+                const historyList = document.getElementById('history-list');
+                const placeholder = document.getElementById('history-placeholder');
+
+                if (Object.keys(data).length === 0) {
+                    placeholder.textContent = '暂无历史评估记录';
+                    return;
+                }
+
+                placeholder.style.display = 'none';
+                historyList.innerHTML = '';
+
+                // 将数据转换为数组以便排序
+                const historyArray = [];
+                for (const location in data) {
+                    historyArray.push({
+                        location: location,
+                        ...data[location]
+                    });
+                }
+
+                // 按时间倒序排序
+                historyArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                historyArray.forEach(record => {
+                    const item = document.createElement('a');
+                    item.className = 'list-group-item list-group-item-action history-record';
+                    item.dataset.key = record.key;
+
+                    const date = new Date(record.timestamp);
+                    const dateStr = date.toLocaleDateString('zh-CN');
+
+                    // 设置污染等级标签颜色
+                    let pollutionBadge = '';
+                    if (record.pollution_level === '轻微') {
+                        pollutionBadge = '<span class="badge bg-success">轻微污染</span>';
+                    } else if (record.pollution_level === '中度') {
+                        pollutionBadge = '<span class="badge bg-warning text-dark">中度污染</span>';
+                    } else {
+                        pollutionBadge = '<span class="badge bg-danger">严重污染</span>';
+                    }
+
+                    item.innerHTML = `
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">${record.location}</h5>
+                            <small>${dateStr}</small>
+                        </div>
+                        <p class="mb-1">土壤类型: ${record.soil_type}</p>
+                        <div class="d-flex justify-content-between">
+                            <small>肥力: ${record.fertility_score.toFixed(1)}/100</small>
+                            ${pollutionBadge}
+                        </div>
+                    `;
+
+                    item.addEventListener('click', function() {
+                        loadHistoryRecord(record.key);
+                    });
+
+                    historyList.appendChild(item);
+                });
+            })
+            .catch(error => {
+                console.error('加载历史记录失败:', error);
+                document.getElementById('history-placeholder').textContent = '加载历史记录失败';
+            });
+        }
+
+        // 加载特定历史记录详情
+        function loadHistoryRecord(key) {
+            showLoading();
+
+            fetch(`/agriculture-history/${key}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('获取历史记录失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                handleAssessmentResult(data);
+            })
+            .catch(error => {
+                alert('错误: ' + error.message);
+            })
+            .finally(() => {
+                hideLoading();
+            });
+        }
+
+        // 初始加载历史记录
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistory();
+        });
+    </script>
+</body>
+</html>

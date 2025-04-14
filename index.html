@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>煤层分析系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.js"></script>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+            padding: 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 70vh;
+            margin-top: 20px;
+        }
+        .coal-info {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .coal-layer-item {
+            background-color: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid red;
+            padding: 5px 10px;
+            margin: 5px 0;
+        }
+        .indicator-btn {
+            margin: 5px;
+        }
+        .depth-select {
+            max-width: 200px;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        /* 滑块样式 */
+        .depth-slider-container {
+            margin: 20px 15px;
+            padding: 10px 0;
+        }
+        .depth-range-slider {
+            height: 15px;
+        }
+        .noUi-connect {
+            background: #007bff;
+        }
+        .noUi-handle {
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 12px;
+            top: -5px !important;
+            cursor: grab;
+        }
+        .noUi-handle:active {
+            cursor: grabbing;
+        }
+        .noUi-handle::before,
+        .noUi-handle::after {
+            display: none;
+        }
+        .depth-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            color: #666;
+            font-size: 12px;
+        }
+        /* 煤层图例样式 */
+        .coal-legend {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .coal-legend-line {
+            display: inline-block;
+            width: 30px;
+            height: 3px;
+            background-color: red;
+            margin-right: 8px;
+        }
+
+        .card {
+            margin: 0 auto;
+        }
+
+        .navbar-nav {
+        text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">煤炭分析系统</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/">煤层分析</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/pollution">煤污染评估</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/resource">资源管理</a>
+                </li>
+                <li class="nav-item">
+            <a class="nav-link" href="/agriculture">
+                <i class="bi bi-tree"></i> 农业利用
+            </a>
+        </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+        <h1 class="text-center mb-4">煤层分析系统</h1>
+
+        <div class="row upload-section">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title navbar-nav">上传钻井数据文件</h5>
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <input class="form-control" type="file" id="file-input" accept=".xlsx,.xls,.csv">
+                                <div class="form-text">请上传包含必要列的Excel文件（深度、深侧向、浅侧向、声波时差、自然伽玛、密度）</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">分析数据</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p>数据处理中，请稍候...</p>
+        </div>
+
+        <div id="results-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title" id="chart-title">深侧向随深度变化图</h5>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline-secondary dropdown-toggle depth-select" type="button" data-bs-toggle="dropdown">
+                                        深度范围: 200m
+                                    </button>
+                                    <ul class="dropdown-menu" id="depth-range-menu">
+                                        <li><a class="dropdown-item" href="#" data-value="25">25米</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="50">50米</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="100">100米</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="200">200米</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="300">300米</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="500">500米</a></li>
+                                        <li><a class="dropdown-item" href="#" data-value="all">全部</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="btn-toolbar mb-3">
+                                <div class="btn-group me-2" id="indicator-buttons">
+                                    <button type="button" class="btn btn-sm btn-primary indicator-btn" data-indicator="深侧向">深侧向</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary indicator-btn" data-indicator="浅侧向">浅侧向</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary indicator-btn" data-indicator="声波时差">声波时差</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary indicator-btn" data-indicator="自然伽玛">自然伽玛</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary indicator-btn" data-indicator="密度">密度</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary indicator-btn" data-indicator="双侧向电阻率">双侧向电阻率</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success indicator-btn" data-indicator="all">全部指标</button>
+                                </div>
+                            </div>
+
+                            <div class="coal-legend">
+                                <span class="coal-legend-line"></span> <span>煤层边界</span>
+                            </div>
+
+                            <div class="chart-container">
+                                <canvas id="main-chart"></canvas>
+                            </div>
+
+                            <!-- 添加深度拖动滑块 -->
+                            <div class="depth-slider-container">
+                                <div id="depth-range-slider" class="depth-range-slider"></div>
+                                <div class="depth-labels">
+                                    <span id="min-depth-label">0m</span>
+                                    <span id="max-depth-label">100m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="coal-info">
+                        <h5>煤层信息 <span id="total-thickness"></span></h5>
+                        <div id="coal-layers-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <script>
+        // 全局变量
+        let chartData = null;
+        let mainChart = null;
+        let currentIndicator = '深侧向';
+        let currentWindowSize = 200;
+        let currentTopDepth = 0;
+        let depthSlider = null;
+        let currentFilename = null;
+
+        // 颜色配置
+        const indicatorColors = {
+            '深侧向': '#1f77b4',
+            '浅侧向': '#ff7f0e',
+            '声波时差': '#2ca02c',
+            '自然伽玛': '#d62728',
+            '密度': '#9467bd',
+            '双侧向电阻率': '#8c564b'
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定文件上传事件
+            document.getElementById('upload-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                uploadFile();
+            });
+
+            // 绑定指标按钮点击事件
+            document.getElementById('indicator-buttons').addEventListener('click', function(event) {
+                if (event.target.classList.contains('indicator-btn')) {
+                    const indicator = event.target.getAttribute('data-indicator');
+                    updateIndicator(indicator);
+
+                    // 更新按钮状态
+                    document.querySelectorAll('.indicator-btn').forEach(btn => {
+                        btn.classList.remove('btn-primary');
+                        btn.classList.add('btn-outline-primary');
+                        if (indicator === 'all' && btn.getAttribute('data-indicator') === 'all') {
+                            btn.classList.remove('btn-outline-success');
+                            btn.classList.add('btn-success');
+                        } else if (indicator !== 'all' && btn.getAttribute('data-indicator') === 'all') {
+                            btn.classList.remove('btn-success');
+                            btn.classList.add('btn-outline-success');
+                        }
+                    });
+
+                    if (indicator !== 'all') {
+                        event.target.classList.remove('btn-outline-primary');
+                        event.target.classList.add('btn-primary');
+                    }
+                }
+            });
+
+            // 绑定深度范围下拉菜单
+            document.getElementById('depth-range-menu').addEventListener('click', function(event) {
+                if (event.target.tagName === 'A') {
+                    event.preventDefault();
+                    const value = event.target.getAttribute('data-value');
+                    updateDepthRange(value);
+
+                    // 更新下拉按钮文本
+                    const text = value === 'all' ? '全部' : `${value}米`;
+                    document.querySelector('.depth-select').textContent = `深度范围: ${text}`;
+                }
+            });
+        });
+
+        // 上传文件并获取数据
+        function uploadFile() {
+            const fileInput = document.getElementById('file-input');
+            if (!fileInput.files.length) {
+                showToast('请选择文件', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            currentFilename = file.name;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 显示加载动画
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results-section').style.display = 'none';
+
+            // 发送请求到后端
+            fetch('http://localhost:5000/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || '上传失败');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 存储获取的数据
+                chartData = data;
+
+                // 初始化图表
+                initializeChart();
+
+                // 初始化深度滑块
+                initializeDepthSlider(data.min_depth, data.max_depth);
+
+                // 显示煤层信息
+                displayCoalLayers(data.coal_layers, data.total_thickness);
+
+                // 隐藏加载动画，显示结果
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('results-section').style.display = 'block';
+
+                // 设置初始深度范围
+                currentTopDepth = data.min_depth;
+                updateDepthRange('200');
+
+                showToast('数据加载成功', 'success');
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                showToast(error.message, 'error');
+                console.error('Error:', error);
+            });
+        }
+
+        // 初始化深度滑块
+        function initializeDepthSlider(minDepth, maxDepth) {
+            const sliderElement = document.getElementById('depth-range-slider');
+            const depthRange = maxDepth - minDepth;
+
+            // 清除旧滑块
+            while (sliderElement.firstChild) {
+                sliderElement.removeChild(sliderElement.firstChild);
+            }
+
+            // 创建滑块
+            noUiSlider.create(sliderElement, {
+                start: [minDepth, minDepth + Math.min(200, depthRange)], // 默认显示前200米或全部
+                connect: true,
+                range: {
+                    'min': minDepth,
+                    'max': maxDepth
+                },
+                step: 1,
+                orientation: 'horizontal',
+                behaviour: 'tap-drag',
+                tooltips: [true, true],
+                format: {
+                    to: function (value) {
+                        return value.toFixed(1) + 'm';
+                    },
+                    from: function (value) {
+                        return Number(value.replace('m', ''));
+                    }
+                }
+            });
+
+            // 更新深度标签
+            document.getElementById('min-depth-label').textContent = minDepth.toFixed(1) + 'm';
+            document.getElementById('max-depth-label').textContent = maxDepth.toFixed(1) + 'm';
+
+            // 添加更新事件
+            sliderElement.noUiSlider.on('update', function (values, handle) {
+                const start = parseFloat(values[0].replace('m', ''));
+                const end = parseFloat(values[1].replace('m', ''));
+
+                // 更新图表范围
+                if (mainChart) {
+                    mainChart.options.scales.y.min = start;
+                    mainChart.options.scales.y.max = end;
+                    mainChart.update();
+                }
+
+                // 高亮显示在视图范围内的煤层
+                highlightVisibleCoalLayers(start, end);
+            });
+
+            // 更高级的响应式拖动 - 拖动停止时获取更精确的数据
+            sliderElement.noUiSlider.on('change', function (values, handle) {
+                const start = parseFloat(values[0].replace('m', ''));
+                const end = parseFloat(values[1].replace('m', ''));
+
+                // 如果我们有更多数据，可以在这里获取更详细的数据区间
+                if (currentFilename) {
+                    fetchDepthRangeData(currentFilename, start, end);
+                }
+            });
+
+            depthSlider = sliderElement.noUiSlider;
+        }
+
+        // 获取指定深度范围的数据
+        function fetchDepthRangeData(filename, startDepth, endDepth) {
+            fetch(`http://localhost:5000/data/${encodeURIComponent(filename)}?start=${startDepth}&end=${endDepth}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('获取数据失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 更新图表数据
+                    updateChartDataInRange(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // 更新指定范围的图表数据
+        function updateChartDataInRange(rangeData) {
+            if (!mainChart || !rangeData) return;
+
+            // 检查是否有深度数据
+            if (!rangeData.depth || rangeData.depth.length === 0) return;
+
+            // 如果显示的是所有指标，使用归一化数据
+            if (currentIndicator === '全部指标') {
+                const indicators = Object.keys(indicatorColors);
+                indicators.forEach((ind, index) => {
+                    if (rangeData.indicators[ind]) {
+                        const normalizedData = normalizeData(rangeData.indicators[ind]);
+                        const newData = rangeData.depth.map((depth, i) => ({ x: normalizedData[i], y: depth }));
+                        mainChart.data.datasets[index].data = newData;
+                    }
+                });
+            } else {
+                // 如果是单个指标
+                if (rangeData.indicators[currentIndicator]) {
+                    const newData = rangeData.depth.map((depth, i) => ({
+                        x: rangeData.indicators[currentIndicator][i],
+                        y: depth
+                    }));
+                    if (mainChart.data.datasets.length > 0) {
+                        mainChart.data.datasets[0].data = newData;
+                    }
+                }
+            }
+
+            // 更新图表
+            mainChart.update();
+        }
+
+        // 高亮显示在当前视图范围内的煤层
+        function highlightVisibleCoalLayers(startDepth, endDepth) {
+            if (!chartData || !chartData.coal_layers) return;
+
+            // 遍历所有煤层条目
+            const layerItems = document.querySelectorAll('.coal-layer-item');
+            chartData.coal_layers.forEach((layer, index) => {
+                if (index < layerItems.length) {
+                    // 检查煤层是否在视图范围内
+                    const isVisible = (layer.start <= endDepth && layer.end >= startDepth);
+
+                    // 添加或移除高亮样式
+                    if (isVisible) {
+                        layerItems[index].style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
+                        layerItems[index].style.borderColor = 'red';
+                        layerItems[index].style.fontWeight = 'bold';
+                    } else {
+                        layerItems[index].style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+                        layerItems[index].style.borderColor = '#ff9999';
+                        layerItems[index].style.fontWeight = 'normal';
+                    }
+                }
+            });
+        }
+
+        // 初始化图表
+        function initializeChart() {
+            const ctx = document.getElementById('main-chart').getContext('2d');
+
+            // 如果图表已存在，销毁它
+            if (mainChart) {
+                mainChart.destroy();
+            }
+
+            // 创建新图表
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'top',
+                            title: {
+                                display: true,
+                                text: '值'
+                            }
+                        },
+                        y: {
+                            reverse: false,
+                            title: {
+                                display: true,
+                                text: '深度 (m)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'y',
+                                onPan: function({chart}) {
+                                    // 更新滑块位置与图表同步
+                                    if (depthSlider) {
+                                        const yScale = chart.scales.y;
+                                        depthSlider.set([yScale.min, yScale.max]);
+                                    }
+                                }
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'y',
+                                onZoom: function({chart}) {
+                                    // 更新滑块位置与图表同步
+                                    if (depthSlider) {
+                                        const yScale = chart.scales.y;
+                                        depthSlider.set([yScale.min, yScale.max]);
+                                    }
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {}
+                        }
+                    }
+                }
+            });
+
+            // 默认显示第一个指标
+            updateIndicator(currentIndicator);
+        }
+
+        // 更新指标显示
+        function updateIndicator(indicator) {
+            if (!chartData || !mainChart) return;
+
+            currentIndicator = indicator;
+
+            // 清除当前数据集
+            mainChart.data.datasets = [];
+
+            // 添加煤层标注线
+            addCoalLayerLines();
+
+            if (indicator === 'all') {
+                // 显示所有指标（归一化）
+                const indicators = Object.keys(indicatorColors);
+                indicators.forEach(ind => {
+                    const normalizedData = normalizeData(chartData.indicators[ind]);
+                    mainChart.data.datasets.push({
+                        label: ind,
+                        data: chartData.depth.map((depth, i) => ({ x: normalizedData[i], y: depth })),
+                        borderColor: indicatorColors[ind],
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0
+                    });
+                });
+
+                // 更新标题和X轴
+                document.getElementById('chart-title').textContent = '所有指标随深度变化对比图';
+                mainChart.options.scales.x.title.text = '归一化值 (0-1)';
+                mainChart.options.scales.x.min = -0.05;
+                mainChart.options.scales.x.max = 1.05;
+            } else {
+                // 显示单个指标
+                const data = chartData.indicators[indicator];
+                mainChart.data.datasets.push({
+                    label: indicator,
+                    data: chartData.depth.map((depth, i) => ({ x: data[i], y: depth })),
+                    borderColor: indicatorColors[indicator],
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0
+                });
+
+                // 更新标题和X轴
+                document.getElementById('chart-title').textContent = `${indicator}随深度变化图`;
+                mainChart.options.scales.x.title.text = `${indicator}值`;
+                mainChart.options.scales.x.min = 0;
+                mainChart.options.scales.x.max = Math.max(...data) * 1.1;
+            }
+
+            // 更新图表
+            mainChart.update();
+        }
+
+        // 归一化数据
+        function normalizeData(data) {
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            return data.map(val => (val - min) / (max - min));
+        }
+
+        // 添加煤层标注线（将原来的区域改为红线标注）
+        function addCoalLayerLines() {
+            if (!chartData || !mainChart) return;
+
+            // 清除旧的标注
+            mainChart.options.plugins.annotation = {
+                annotations: {}
+            };
+
+            // 为每个煤层添加顶部和底部红线标注
+            chartData.coal_layers.forEach((layer, index) => {
+                // 煤层顶部红线
+                const topLineId = `coal-top-${index}`;
+                mainChart.options.plugins.annotation.annotations[topLineId] = {
+                    type: 'line',
+                    xScaleID: 'x',
+                    yScaleID: 'y',
+                    xMin: 0,
+                    xMax: 1,
+                    yMin: layer.start,
+                    yMax: layer.start,
+                    borderColor: 'red',
+                    borderWidth: 2,
+                    label: {
+                        content: `${index + 1}`,
+                        display: true,
+                        position: 'start',
+                        backgroundColor: 'red',
+                        color: 'white',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        }
+                    }
+                };
+
+                // 煤层底部红线
+                const bottomLineId = `coal-bottom-${index}`;
+                mainChart.options.plugins.annotation.annotations[bottomLineId] = {
+                    type: 'line',
+                    xScaleID: 'x',
+                    yScaleID: 'y',
+                    xMin: 0,
+                    xMax: 1,
+                    yMin: layer.end,
+                    yMax: layer.end,
+                    borderColor: 'red',
+                    borderWidth: 2
+                };
+
+                // 添加连接顶部和底部的垂直线（左侧）
+                const leftLineId = `coal-left-${index}`;
+                mainChart.options.plugins.annotation.annotations[leftLineId] = {
+                    type: 'line',
+                    xScaleID: 'x',
+                    yScaleID: 'y',
+                    xMin: 0,
+                    xMax: 0,
+                    yMin: layer.start,
+                    yMax: layer.end,
+                    borderColor: 'red',
+                    borderWidth: 1,
+                    borderDash: [4, 4]
+                };
+            });
+        }
+
+        // 更新深度范围
+        function updateDepthRange(value) {
+            if (!chartData || !mainChart || !depthSlider) return;
+
+            let windowSize;
+            if (value === 'all') {
+                windowSize = chartData.max_depth - chartData.min_depth;
+                currentTopDepth = chartData.min_depth;
+
+                // 更新滑块范围到全部
+                depthSlider.set([chartData.min_depth, chartData.max_depth]);
+            } else {
+                windowSize = parseFloat(value);
+                // 确保当前深度范围有效
+                if (currentTopDepth + windowSize > chartData.max_depth) {
+                    currentTopDepth = Math.max(chartData.min_depth, chartData.max_depth - windowSize);
+                }
+
+                // 更新滑块范围
+                depthSlider.set([currentTopDepth, currentTopDepth + windowSize]);
+            }
+
+            currentWindowSize = windowSize;
+
+            // 更新图表Y轴范围已通过滑块更新
+
+            // 重新添加煤层标注
+            addCoalLayerLines();
+
+            // 高亮显示在视图范围内的煤层
+            highlightVisibleCoalLayers(currentTopDepth, currentTopDepth + windowSize);
+        }
+
+        // 显示煤层信息
+        function displayCoalLayers(layers, totalThickness) {
+            const container = document.getElementById('coal-layers-list');
+            container.innerHTML = '';
+
+            layers.forEach((layer, index) => {
+                const item = document.createElement('div');
+                item.className = 'coal-layer-item';
+                item.innerHTML = `
+                    <strong>${index + 1}号煤层:</strong>
+                    ${layer.start.toFixed(2)}m 至 ${layer.end.toFixed(2)}m,
+                    厚度: ${layer.thickness.toFixed(2)}m
+                `;
+
+                // 添加点击事件 - 点击煤层导航到该位置
+                item.addEventListener('click', function() {
+                    if (depthSlider) {
+                        // 计算合适的视图范围
+                        const padding = 20; // 额外显示煤层上下20米
+                        const rangeStart = Math.max(chartData.min_depth, layer.start - padding);
+                        const rangeEnd = Math.min(chartData.max_depth, layer.end + padding);
+
+                        // 设置滑块和图表范围
+                        depthSlider.set([rangeStart, rangeEnd]);
+                    }
+                });
+
+                container.appendChild(item);
+            });
+
+            // 显示总厚度
+            document.getElementById('total-thickness').textContent = `(总厚度: ${totalThickness.toFixed(2)}m)`;
+        }
+
+        // 显示提示消息
+        function showToast(message, type) {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: "top",
+                position: "center",
+                backgroundColor: type === 'error' ? "#ff6b6b" : "#51cf66",
+            }).showToast();
+        }
+    </script>
+</body>
+</html>
